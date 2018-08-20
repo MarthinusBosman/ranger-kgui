@@ -26,9 +26,6 @@ from google.cloud import vision
 
 CLOUD_STORAGE_BUCKET = os.environ.get('CLOUD_STORAGE_BUCKET')
 
-class MyForm(Form):
-    source_code = CodeMirrorField(language='python', config={'lineNumbers' : 'true'})
-    submit = SubmitField('Submit')
 
 app = Flask(__name__)
 
