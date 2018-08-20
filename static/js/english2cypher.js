@@ -34,6 +34,5 @@ WHERE toString(outy) =~ "^('+result.english2cypher4Date_One[0].join("")+'|$[Date
 RETURN a.error_code,COUNT(error_total) AS Total ORDER BY Total "'+result.english2cypher4Degree[0].join("")+'" LIMIT 1\n\
 ';
 }
-
 	codeMirrorEditor.setValue(code);
 };

@@ -22,11 +22,7 @@ from google.cloud import datastore
 from google.cloud import storage
 from google.cloud import vision
 
-from flask_wtf import Form
-
-from flask.ext.codemirror.fields import CodeMirrorField
-from wtforms.fields import SubmitField
-
+from english2cypher import * 
 
 CLOUD_STORAGE_BUCKET = os.environ.get('CLOUD_STORAGE_BUCKET')
 
@@ -56,12 +52,6 @@ def add_answer(question):
 		answer = request.form['add_answer_box']
 	return render_template('index.html', question=question)
 
-@app.route('/', methods = ['GET', 'POST'])
-def index():
-    form = MyForm()
-    if form.validate_on_submit():
-        text = form.source_code.data
-    return render_template('index.html', form = form)
 
 
 @app.route('/upload_photo', methods=['GET', 'POST'])
