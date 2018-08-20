@@ -1,3 +1,4 @@
+
 function englishParser(searchTextBoxId, codeMirrorEditor){
 	const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar));
 	var text = document.getElementById(searchTextBoxId).value;
