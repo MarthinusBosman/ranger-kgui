@@ -22,7 +22,8 @@ from google.cloud import datastore
 from google.cloud import storage
 from google.cloud import vision
 
-from flask.ext.wtf import Form
+from flask_wtf import Form
+
 from flask.ext.codemirror.fields import CodeMirrorField
 from wtforms.fields import SubmitField
 
