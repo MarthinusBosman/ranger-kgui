@@ -1,5 +1,10 @@
 runtime: python
 env: flex
+
+handlers:
+  - url: /js
+  static_dir: js
+
 entrypoint: gunicorn -b :$PORT main:app
 
 runtime_config:
@@ -8,9 +13,4 @@ runtime_config:
 env_variables:
   CLOUD_STORAGE_BUCKET: <your-cloud-storage-bucket>
 
-handlers:
-  - url: /js
-  static_dir: js
 
-  -   url: /.*
-    script: main.py
