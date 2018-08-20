@@ -31,6 +31,9 @@
 <script src="js/FileSaver.js"></script>
 <script src="js/canvas-toBlob.js"></script>
 
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
+
 <!--<script src="http://purl.eligrey.com/github/FileSaver.js/blob/master/src/FileSaver.js"></script>-->
 
 <script src="https://code.highcharts.com/highcharts.js"></script>
@@ -336,11 +339,21 @@ function query_table() {
 
     function download_chart() {
   //destroy chart:
-   $("#statsChart").get(0).toBlob(function(blob) {
+//   $("#statsChart").get(0).toBlob(function(blob) {
 
-            saveAs(blob, "chart_1.png"); 
+         //   saveAs(blob, "chart_1.png"); 
 //queryChart.exportChart({format: "png"});
-        });
+      //  });
+
+
+      html2canvas(document.getElementById('queryChart'), {
+      onrendered: function(canvas) {
+         var link = document.createElement('a');
+         link.href = canvas.toDataURL('image/jpeg');
+         link.download = 'myChart.jpeg';
+         link.click();
+      }
+   })
        
 }
 
@@ -393,7 +406,7 @@ function query_table() {
         <div class="col-md-6">
             <h2>Render your own results</h2>
 
-            <canvas id="queryChart"></canvas>
+            <canvas style="background:white;" id="queryChart"></canvas>
 
             <div class="row">
                 <div class="col-md-11">
