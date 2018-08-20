@@ -5,12 +5,13 @@ handlers:
   - url: /js
   static_dir: js
 
-entrypoint: gunicorn -b :$PORT main:app
+  - url: /.*
+  script: main.app
+
 
 runtime_config:
   python_version: 3
 
 env_variables:
-  CLOUD_STORAGE_BUCKET: <your-cloud-storage-bucket>
-
+  CLOUD_STORAGE_BUCKET: staging.ranger-convo-ui.appspot.com
 

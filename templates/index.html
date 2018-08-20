@@ -25,12 +25,17 @@
     <script src="https://cdn.rawgit.com/neo4j/neo4j-javascript-driver/1.1/lib/browser/neo4j-web.min.js"></script>
 
 
-<script src="js/nearley.js"></script>
-<script src="/js/nearley.js"></script>
+<!--<script src="js/nearley.js"></script>
 <script src="js/english2cypher.js"></script>
-<script src="js/grammar.js"></script>
-<script src="/js/english2cypher.js"></script>
-<script src="/js/grammar.js"></script>
+<script src="js/grammar.js"></script>-->
+
+
+<script src=""{{ url_for('static', filename='js/nearley.js') }}""></script>
+<script src=""{{ url_for('static', filename='js/english2cypher.js') }}""></script>
+<script src=""{{ url_for('static', filename='js/grammar.js') }}""></script>
+
+
+
 
 
 <!--<link rel="stylesheet" href="./gsssrao.github.io_files/bulma.css">
@@ -44,12 +49,6 @@
 
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-
-
-
-
-
-
     <script type="text/javascript">
         var chartType = 'bar';
         var ctx ="#queryChart";
