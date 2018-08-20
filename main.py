@@ -22,9 +22,16 @@ from google.cloud import datastore
 from google.cloud import storage
 from google.cloud import vision
 
+from flask.ext.wtf import Form
+from flask.ext.codemirror.fields import CodeMirrorField
+from wtforms.fields import SubmitField
+
 
 CLOUD_STORAGE_BUCKET = os.environ.get('CLOUD_STORAGE_BUCKET')
 
+class MyForm(Form):
+    source_code = CodeMirrorField(language='python', config={'lineNumbers' : 'true'})
+    submit = SubmitField('Submit')
 
 app = Flask(__name__)
 
@@ -41,6 +48,19 @@ def homepage():
 
     # Return a Jinja2 HTML template and pass in image_entities as a parameter.
     return render_template('index.html', image_entities=image_entities)
+
+@app.route('/', methods=['GET', 'POST'])
+def add_answer(question):
+	if request.method == 'POST':
+		answer = request.form['add_answer_box']
+	return render_template('index.html', question=question)
+
+@app.route('/', methods = ['GET', 'POST'])
+def index():
+    form = MyForm()
+    if form.validate_on_submit():
+        text = form.source_code.data
+    return render_template('index.html', form = form)
 
 
 @app.route('/upload_photo', methods=['GET', 'POST'])

@@ -363,6 +363,7 @@ function query_table() {
     
           
     </script>
+    {{ codemirror.include_codemirror() }}
 </head>
 <body>
 <nav class="navbar navbar-inverse navbar-fixed-top">
@@ -430,6 +431,11 @@ RETURN n.id AS ID ,n.total_errors_experienced AS Errors-->
     </p>
 </div>
 <button onclick="myFunction()">Convert 2 Cypher</button>
+
+   <form method="POST">
+       {{ form.source_code }}
+       <input type="submit" value="OK">
+    </form>
 
 <input type="text" style="color:blue;margin-left:30px;" id="cypherBox">
 
