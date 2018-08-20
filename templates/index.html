@@ -1,0 +1,534 @@
+<!-- License MIT -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ranger-KGUI</title>
+
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.10.18/b-1.5.2/b-colvis-1.5.2/datatables.min.css"/>
+ 
+<script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.18/b-1.5.2/b-colvis-1.5.2/datatables.min.js"></script>
+
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+          integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"
+          integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
+            integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
+            crossorigin="anonymous"></script>
+    <script type="text/javascript"
+            src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.3/Chart.bundle.min.js"></script>
+    <script src="https://cdn.rawgit.com/neo4j/neo4j-javascript-driver/1.1/lib/browser/neo4j-web.min.js"></script>
+<script src="js/nearley.js"></script>
+<script src="js/english2cypher.js"></script>
+<script src="js/grammar.js"></script>
+<link rel="stylesheet" href="./gsssrao.github.io_files/bulma.css">
+<link rel="stylesheet" href="./gsssrao.github.io_files/bulma.css.map">
+<link rel="stylesheet" href="./gsssrao.github.io_files/bulma.min.css">
+
+<!-- Codemirror for syntax highlighting -->
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.17.0/codemirror.css"/>
+<link rel="stylesheet" href="./gsssrao.github.io_files/neo.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.32.0/codemirror.min.js"></script>
+<script src="./gsssrao.github.io_files/cypher.js"></script>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+
+
+
+
+
+    <script type="text/javascript">
+        var chartType = 'bar';
+        var ctx ="#queryChart";
+        var samples = 10;
+        var statsChart, queryChart;
+        function newStatsChart() {
+// tag::chart-setup[]
+            return new Chart($("#statsChart"), {
+                label: 'Neo4j Database Statistics',
+                type: 'line', height: 500, width: 800,
+                fill: false, lineTension: 0, showLines: true,
+                data: { labels: [], datasets: [] },
+                options: {
+legend: {
+            display: true,
+         position:'bottom'},
+                    scales: {
+                        xAxes: [{
+                            type: 'time', time: {unit: 'second', displayFormats: {second: "HH:mm:ss"}},
+                            ticks: { callback: function (label, index) { return index % 2 == 0 ? label : "" } }
+                        }],
+                        yAxes: [{
+                            type: 'logarithmic', min: 0,
+                            ticks: { callback: function (label) { return label; } } // no scientific notation
+                        }]
+                    }
+                }
+            });
+// end::chart-setup[]
+        }
+        
+        function newqueryChart() {
+        return new Chart($("#queryChart"), {
+             label: 'Neo4j Database Statistics',
+                type: chartType, height: 500, width: 800,
+                fill: false, lineTension: 0, showLines: true,
+                data: { labels: [], datasets: [] },
+                backgroundColor: 'rgba(255, 99, 132, 0.2)'
+        });
+        }
+
+        $(document).ready(function () {
+            statsChart = newStatsChart();
+            statsChart.update();
+             
+            //queryChart = new Chart($("#queryChart"), {
+              //  type: chartType, label: 'Query Results', fill: false, lineTension: 0, showLines: true,
+             //   data: {labels: [], datasets: []}
+          //  });
+             queryChart = newqueryChart();
+            queryChart.update();
+             $('#myTable').DataTable();
+      
+        });
+        var running = undefined;
+        function toggle() {
+            if (!running) {
+                running = setInterval(stats, parseInt($("#refresh").val()) * 1000);
+                stats();
+                stats();
+                $("#stats").text("Stats: Stop");
+            } else {
+                clearInterval(running);
+                running = undefined;
+                $("#stats").text("Stats: Start");
+            }
+        }
+        // tag::stats-query[]
+        function stats() {
+            var neo = neo4j.v1;
+            var driver = neo.driver($("#url").val(), neo.auth.basic("neo4j", $("#password").val()));
+            var session = driver.session();
+            var session2 = driver.session();
+            var d = Date.now();
+            session2.run("MATCH () RETURN count(*) LIMIT 2").then(function (result) {
+                update(d, "nodes", result.records[0]._fields[0].toNumber());
+            });
+            session2.run("MATCH ()-->() RETURN count(*) LIMIT 2").then(function (result) {
+                update(d, "rels", result.records[0]._fields[0].toNumber());
+            });
+            session.run("CALL db.labels()").then(function (result) {
+                result.records.forEach(function (r) {
+                    var l = r._fields[0];
+                    var stmt = "MATCH (:`" + l + "`) RETURN count(*) LIMIT 2";
+                    session2.run(stmt).then(function (result2) {
+                        update(d, l, result2.records[0]._fields[0].toNumber());
+                    });
+                });
+            });
+            session.run("CALL db.relationshipTypes() LIMIT 2").then(function (result) {
+                result.records.forEach(function (r) {
+                    var l = r._fields[0];
+                    var stmt = "MATCH ()-[:`" + l + "`]->() RETURN count(*) LIMIT 2";
+                    session2.run(stmt).then(function (result2) {
+                        update(d, l, result2.records[0]._fields[0].toNumber());
+                    });
+                });
+            });
+        }
+        // end::stats-query[]
+        // tag::chart-update[]
+        // from http://colorbrewer2.org/ via http://www.zingchart.com/blog/2015/12/09/color-charts/
+        var colors = ['#d53e4f', '#f46d43', '#fdae61', '#fee08b', '#ffffbf', '#e6f598', '#abdda4', '#66c2a5', '#3288bd'];
+        var stopper =0;
+        function update(time, label, value) {
+            var labels = statsChart.data.labels;
+            var datasets = statsChart.data.datasets;
+            var title = "# of " + label;
+            var insert = labels.indexOf(time);
+            // new timestamp
+            if (insert == -1) {
+                // too many samples, remove first entry
+                if (labels.length > samples) {
+                    labels.shift();
+                    datasets.forEach(function (ds) { ds.data.shift(); });
+                }
+                insert = labels.length;
+                labels[insert] = time;
+            }
+            // find dataset
+            var idx = datasets.findIndex(function(ds) { return ds.label == title});
+            // add new dataset
+            if (idx == -1) {
+                idx = datasets.length;
+                datasets.push({ label: title, data: labels.map(function(){return 1;}), borderColor: colors[idx % colors.length], fill: false});
+            }
+            datasets[idx].data[insert] = value;
+           
+         //  if(stopper<70){
+            statsChart.update();
+          //  stopper++;
+       // }
+        }
+        // end::chart-update[]
+        function query() {
+            
+            var neo = neo4j.v1;
+            var driver = neo.driver($("#url").val(), neo.auth.basic("neo4j", $("#password").val()));
+            var session = driver.session();
+            session.run($("#query").val()).then(function (result) {
+                var data = queryChart.data;
+               
+                var first = true;
+                data.labels = [];
+                //console.log(data);
+            
+                result.records.forEach(function (r) {
+                    if (data.labels.length == 0) {
+                        queryChart.label = 'Query Results - ' + r.keys[0];
+                        
+                         //console.log(r._fields[0]);
+                         
+                         var color_array = new Array('#f46d43', '#ff6347', '#fdae61', '#fee08b', '#ffffbf', '#e6f598', '#abdda4', '#66c2a5', '#3288bd','#0AFE47','#ffffba','#bae1ff','#baffc9','#ffb3ba' );
+                   
+                        for (var i = 1; i < r.keys.length; i++) {
+                            data.datasets[i - 1] = {
+                                label: r.keys[i],
+                                data: [],
+                                fill: false,
+                                backgroundColor: color_array,
+                                borderColor: colors[i % colors.length]
+                            };
+                          //  console.log(data.datasets[0]);
+                        }
+                    }
+                    var l = r._fields[0].toString();
+                    data.labels.push(l);
+                    for (var i = 1; i < r._fields.length; i++) {
+                        var v = r._fields[i].toNumber ? r._fields[i].toNumber() : r._fields[i];
+                        data.datasets[i - 1].data.push(v);
+                    }
+                });
+                
+                queryChart.update(1000, true);
+                
+                session.close();
+                driver.close();
+            });
+        }
+        
+        
+        
+    </script>
+            
+    </script>
+
+    <script >
+    	
+       function getRandomColor() {
+    var letters = '0123456789ABCDEF'.split('');
+    var color = '#';
+    for (var i = 0; i < 6; i++ ) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+} 
+    	
+    </script>
+    <script>
+function query_table() {
+            
+            var neo = neo4j.v1;
+            var driver = neo.driver($("#url").val(), neo.auth.basic("neo4j", $("#password").val()));
+            var session = driver.session();
+            session.run($("#query").val()).then(function (result) {
+                var data = queryChart.data;
+               
+                var first = true;
+                data.labels = [];
+                //console.log(data);
+            
+                result.records.forEach(function (r) {
+                    if (data.labels.length == 0) {
+                        queryChart.label = 'Query Results - ' + r.keys[0];
+                        
+                         //console.log(r._fields[0]);
+                        
+                        for (var i = 1; i < r.keys.length; i++) {
+                            data.datasets[i - 1] = {
+                                label: r.keys[i],
+                                data: [],
+                                fill: false,
+                                backgroundColor: 'rgba(255, 0, 0, 0.8)',
+                                borderColor: colors[i % colors.length]
+                            };
+                          //  console.log(data.datasets[0]);
+                        }
+                    }
+                    var l = r._fields[0].toString();
+                    data.labels.push(l);
+                    for (var i = 1; i < r._fields.length; i++) {
+                        var v = r._fields[i].toNumber ? r._fields[i].toNumber() : r._fields[i];
+                        data.datasets[i - 1].data.push(v);
+                    }
+                });
+                
+                queryChart.update(1000, true);
+                
+                session.close();
+                driver.close();
+            });
+        }
+
+
+    </script>
+
+
+    <script>
+
+
+    	 var dataMap = {
+     'line': {
+         method: 'Line',
+         data: {
+             labels: ["January", "February", "March", "April", "May", "June", "July"],
+             datasets: [{
+                 label: "My First dataset",
+                 fillColor: "rgba(220,220,220,0.5)",
+                 strokeColor: "rgba(220,220,220,0.8)",
+                 highlightFill: "rgba(220,220,220,0.75)",
+                 highlightStroke: "rgba(220,220,220,1)",
+                 data: [65, 59, 80, 81, 56, 55, 40]
+             }, {
+                 label: "My Second dataset",
+                 fillColor: "rgba(151,187,205,0.5)",
+                 strokeColor: "rgba(151,187,205,0.8)",
+                 highlightFill: "rgba(151,187,205,0.75)",
+                 highlightStroke: "rgba(151,187,205,1)",
+                 data: [28, 48, 40, 19, 86, 27, 90]
+             }],
+         }
+     },
+     'pie': {
+         method: 'Pie',
+         data: [{
+             value: 300,
+             color: "#F7464A",
+             highlight: "#FF5A5E",
+             label: "Red"
+         }, {
+             value: 50,
+             color: "#46BFBD",
+             highlight: "#5AD3D1",
+             label: "Green"
+         }, {
+             value: 100,
+             color: "#FDB45C",
+             highlight: "#FFC870",
+             label: "Yellow"
+         }]
+     }
+ };
+        
+    function toggleChart() {
+  //destroy chart:
+   
+   if(queryChart){queryChart.destroy();}
+  //change chart type: 
+
+ //this.chartType = (this.chartType == 'bar') ? 'line' : 'bar';
+        //'radar' , 'pie', 'polarArea' ,'bubble',
+        var determineChart = $("#chart_type").val();
+     
+        chartType = determineChart;
+     
+        console.log(determineChart);
+        query();
+         queryChart = newqueryChart();
+         queryChart.update(1000, false);
+       
+}
+    
+          
+    </script>
+</head>
+<body>
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="https://ambrite.herokuapp.com/index.html">Ranger-KGUI</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <form class="navbar-form navbar-left">
+                <div class="form-group">
+                    <input type="text" id="url" value="bolt://35.204.8.2:7687" class="form-control">
+                    <p style="color:white;">bolt://35.204.8.2:7687</p>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" value="powerranger" class="form-control">
+                     <p style="color:white;">powerranger</p>
+                </div>
+                <div class="form-group">
+                    <input type="number" id="refresh" value="60" title="Refresh in seconds" class="form-control">
+                    <p style="color:white;">Refresh rate</p>
+                </div>
+                <button id="stats" class="btn btn-success" onclick="toggle();return false;">Stats: Start</button>
+
+            </form>
+        </div><!--/.navbar-collapse -->
+    </div>
+</nav>
+<br>  <br>  <br>  <br>  <br>  
+<div class="container">
+
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Database Statistics</h2>
+
+            <canvas id="statsChart" height="400"></canvas>
+
+        </div>
+        <div class="col-md-6">
+            <h2>Render your own results</h2>
+
+            <canvas id="queryChart"></canvas>
+
+            <div class="row">
+                <div class="col-md-11">
+        <textarea id="query" cols="70" rows="4"></textarea>
+
+       <!--MATCH (n:Customer) 
+RETURN n.id AS ID ,n.total_errors_experienced AS Errors-->
+
+<p>Enter a query below and click on the convert button or click on any of the paste buttons above and click on covert button:</p>
+
+<div class="field has-addons">
+    <p class="control is-expanded">
+    <input class="input" style="width:1000px;height:50px;" type="text" placeholder="English Query" id="englishTextBoxId" data-multiple="">
+    </p>
+    <p class="control">
+
+    
+    </a>
+    </p>
+</div>
+<button onclick="myFunction()">Convert 2 Cypher</button>
+
+<input type="text" style="color:blue;margin-left:30px;" id="cypherBox">
+
+
+
+<div class="box">
+  <article class="media">
+    <div class="media-content">
+      <div class="content">
+        <h3>Example Queries</h3>
+        <ol>
+          <li>What version is 100415707?</li>
+          <li>List customers and degradations</li> 
+        </ol>
+         <button class="button is-info" id="paste1">Paste 1</a>
+         <button class="button is-info" id="paste2">Paste 2</a>
+         <button class="button is-info" id="paste3">Paste 3</a>
+         <button class="button is-info" id="paste4">Paste 4</a>
+      </div>
+    </div>
+  </article>
+</div>
+
+
+<table id="myTable" class="display">
+    <thead>
+        <tr>
+            <th>Column 1</th>
+            <th>Column 2</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Row 1 Data 1</td>
+            <td>Row 1 Data 2</td>
+        </tr>
+        <tr>
+            <td>Row 2 Data 1</td>
+            <td>Row 2 Data 2</td>
+        </tr>
+    </tbody>
+</table>
+
+<ul>
+
+    <li>MATCH (n)
+RETURN labels(n), count(*)</li>
+<li>MATCH (n:Customer) RETURN n.id AS ID ,n.total_errors_experienced AS Errors</li>
+    </ul>
+                    
+                    
+                </div>
+                <div class="col-md-1">
+                   <!-- <button class="btn btn-success" onClick="query()">Run</button>-->
+                     <button class="btn btn-success" onClick="toggleChart()">Run</button>
+                    <br>
+
+<select class="w3-select" name="option" id="chart_type" value="bar">
+ <option value="bar">Bar Graph</option>
+  <option value="radar">Radar Graph</option>
+  <option value="pie">Pie Graph</option>
+  <option value="polarArea">Polar Area Graph</option>
+  <option value="line">Line Graph</option>
+<option value="bubble">Bubble Graph</option>
+</select>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+  var codeMirrorEditor = CodeMirror.fromTextArea(document.getElementById("cypherBox"), {
+    mode:'cypher',
+    lineNumbers: true,
+    lineWrapping: true,
+    scrollbarStyle: "native"
+});
+  var code = 
+``;
+  codeMirrorEditor.setValue(code);
+</script>
+
+<script>
+function myFunction(){
+englishParser("englishTextBoxId", codeMirrorEditor);
+};
+</script>
+
+
+
+<script>
+$("#paste1").click(function() {
+    document.getElementById("englishTextBoxId").value="What version is 100415707?";
+});
+$("#paste2").click(function() {
+    document.getElementById("englishTextBoxId").value="List customers and degradations";
+});
+$("#paste3").click(function() {
+    document.getElementById("englishTextBoxId").value="ALL THE people in the database limit to 1000";
+});
+$("#paste4").click(function() {
+    document.getElementById("englishTextBoxId").value="All the companies in the database";
+});
+</script>
+</body>
+</html>
