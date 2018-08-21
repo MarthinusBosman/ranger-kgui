@@ -24,7 +24,7 @@ from google.cloud import vision
 
 
 
-CLOUD_STORAGE_BUCKET = os.environ.get('CLOUD_STORAGE_BUCKET')
+#CLOUD_STORAGE_BUCKET = os.environ.get('CLOUD_STORAGE_BUCKET')
 
 
 app = Flask(__name__)
@@ -33,15 +33,15 @@ app = Flask(__name__)
 @app.route('/')
 def homepage():
     # Create a Cloud Datastore client.
-    datastore_client = datastore.Client()
+    #datastore_client = datastore.Client()
 
     # Use the Cloud Datastore client to fetch information from Datastore about
     # each photo.
-    query = datastore_client.query(kind='Faces')
-    image_entities = list(query.fetch())
+    #query = datastore_client.query(kind='Faces')
+    #image_entities = list(query.fetch())
 
     # Return a Jinja2 HTML template and pass in image_entities as a parameter.
-    return render_template('index.html', image_entities=image_entities)
+    return render_template('index.html')
 
 @app.route('/', methods=['GET', 'POST'])
 def add_answer(question):
